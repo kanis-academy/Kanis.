@@ -1,0 +1,5 @@
+npm install
+npm run android:add
+npm run assets
+npm run sync
+npm run build:apk
