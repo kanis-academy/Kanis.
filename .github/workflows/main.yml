@@ -1,14 +1,14 @@
 
-name: Build KANIS VPN ACADEMY APK
+name: KANIS - Build APK
 
 on:
   push:
-    branches: [main, master]
+    branches: [ main, master ]
   workflow_dispatch:
 
 jobs:
   build-apk:
-    name: Compiler APK Android
+    name: Compiler KANIS APK
     runs-on: ubuntu-latest
     timeout-minutes: 45
 
@@ -28,41 +28,45 @@ jobs:
           java-version: 21
 
       - name: Installer Android SDK
-        uses: android-actions/setup-android@v3
+        uses: android-actions/setup-android@v4
+        with:
+          packages: 'platform-tools'
 
-      - name: Verifier les fichiers
+      - name: Verifier les fichiers KANIS
         run: |
-          test -f package.json
-          test -f capacitor.config.json
           test -f www/index.html
           test -f www/img/logo.png
+          test -f www/img/logo-192.png
           test -f www/js/kanis-backend.js
           test -f www/js/config.js
           test -f scripts/patch-android.js
-          test -f scripts/copy-vendor.js
+          test -f capacitor.config.json
+          test -f package.json
           test -f resources/icon-only.png
           test -f resources/icon-foreground.png
           test -f resources/icon-background.png
           test -f resources/splash.png
           test -f resources/splash-dark.png
+          grep -q "supabase.co" www/js/config.js
+          ! grep -rn "sb_secret_" www/
 
       - name: Installer les dependances
-        run: npm install --no-audit --no-fund
+        run: npm install
 
-      - name: Copier Supabase
+      - name: Copier Supabase dans l'application
         run: |
           npm run vendor
           test -f www/js/vendor/supabase.js
 
-      - name: Creer Android
+      - name: Creer le projet Android
         run: npx cap add android
 
-      - name: Configurer Android
+      - name: Configurer le lien de connexion
         run: |
           node scripts/patch-android.js
           grep -q 'android:scheme="kanisvpn"' android/app/src/main/AndroidManifest.xml
 
-      - name: Generer les icones
+      - name: Generer les icones Android
         run: npx capacitor-assets generate --android --assetPath resources
 
       - name: Synchroniser Capacitor
@@ -72,17 +76,16 @@ jobs:
         working-directory: android
         run: |
           chmod +x gradlew
-          ./gradlew assembleDebug --stacktrace
+          ./gradlew assembleDebug --no-daemon --stacktrace
 
-      - name: Preparer APK
-        run: |
-          cp android/app/build/outputs/apk/debug/app-debug.apk KANIS-VPN-ACADEMY.apk
+      - name: Renommer APK
+        run: cp android/app/build/outputs/apk/debug/app-debug.apk KANIS.apk
 
       - name: Publier APK
         uses: actions/upload-artifact@v4
         with:
-          name: KANIS-VPN-ACADEMY-APK
-          path: KANIS-VPN-ACADEMY.apk
+          name: KANIS-APK
+          path: KANIS.apk
           if-no-files-found: error
           retention-days: 30
           
